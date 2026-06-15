@@ -35,6 +35,7 @@ struct TagFilterView: View {
     @ViewBuilder
     private func chip(for tag: Tag) -> some View {
         let isOn = selected.contains(tag.id)
+        let color = Color(hex: tag.colorHex)
         Button {
             toggle(tag.id)
         } label: {
@@ -42,8 +43,13 @@ struct TagFilterView: View {
                 .font(.subheadline)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(isOn ? Color(hex: tag.colorHex).opacity(0.35) : Color.gray.opacity(0.15))
-                .clipShape(Capsule())
+                .background(
+                    Capsule().fill(isOn ? color.opacity(0.20) : Color(.secondarySystemBackground))
+                )
+                .overlay(
+                    Capsule().stroke(isOn ? color : Color.clear, lineWidth: 1.5)
+                )
+                .foregroundStyle(isOn ? .primary : .secondary)
         }
         .buttonStyle(.plain)
     }
