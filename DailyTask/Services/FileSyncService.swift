@@ -50,6 +50,14 @@ final class FileSyncService {
         try context.save()
     }
 
+    /// 初回起動時など BackupFile が1件も無い場合に、空データのデフォルトファイルを
+    /// 作成して active にする。既に1件でも存在する場合は何もしない（冪等）。
+    func seedDefaultFileIfNeeded() throws {
+        let existing = try context.fetch(FetchDescriptor<BackupFile>())
+        guard existing.isEmpty else { return }
+        try exportToActiveFile()   // active が無いのでデフォルト DailyTask.json（空データ）を生成
+    }
+
     /// ファイル編集保存時。パース → 検証 → 通過時のみ内部DBへ反映。失敗時は反映せず拒否。
     func importFromFile(_ data: Data) throws {
         let dto = try codec.decode(data)

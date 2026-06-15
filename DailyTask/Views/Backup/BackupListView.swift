@@ -15,6 +15,12 @@ struct BackupListView: View {
     @Environment(\.modelContext) private var context
     @State private var vm: BackupViewModel?
     @State private var importing = false
+    @State private var editingFile: BackupFile?
+    @State private var editMode: EditMode = .inactive
+    @State private var selection: Set<BackupFile.ID> = []
+    @State private var creatingNew = false
+    @State private var newFileName = ""
+    @State private var confirmingDelete = false
 
     var body: some View {
         NavigationStack {
@@ -26,15 +32,63 @@ struct BackupListView: View {
                 }
             }
             .navigationTitle("保存データ")
+            .environment(\.editMode, $editMode)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if let vm, !vm.files.isEmpty {
+                        Button(editMode.isEditing ? "完了" : "選択") { toggleEditing() }
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { importing = true } label: { Label("追加", systemImage: "plus") }
+                    if editMode.isEditing {
+                        Button { editSelected() } label: {
+                            Label("編集", systemImage: "square.and.pencil")
+                                .labelStyle(.titleAndIcon)
+                        }
+                        .disabled(selection.count != 1)
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    if editMode.isEditing {
+                        Button(role: .destructive) { confirmingDelete = true } label: {
+                            Label(selection.isEmpty ? "削除" : "削除 (\(selection.count))",
+                                  systemImage: "trash")
+                                .labelStyle(.titleAndIcon)
+                        }
+                        .disabled(selection.isEmpty)
+                    } else {
+                        Menu {
+                            Button { startNewFile() } label: {
+                                Label("新規作成", systemImage: "doc.badge.plus")
+                            }
+                            Button { importing = true } label: {
+                                Label("ファイルを開く", systemImage: "folder")
+                            }
+                        } label: {
+                            Label("追加", systemImage: "plus")
+                        }
+                    }
                 }
             }
             .fileImporter(isPresented: $importing,
                           allowedContentTypes: [.json],
                           allowsMultipleSelection: false) { result in
                 handleImport(result)
+            }
+            .alert("新規作成", isPresented: $creatingNew) {
+                TextField("ファイル名", text: $newFileName)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                Button("作成") { vm?.createNewFile(named: newFileName) }
+                Button("キャンセル", role: .cancel) {}
+            } message: {
+                Text("空のデータでファイルを作成します。")
+            }
+            .alert("削除しますか？", isPresented: $confirmingDelete) {
+                Button("削除", role: .destructive) { if let vm { deleteSelected(vm) } }
+                Button("キャンセル", role: .cancel) {}
+            } message: {
+                Text("選択した \(selection.count) 件のファイルを削除します。この操作は取り消せません。")
             }
         }
         .task {
@@ -50,18 +104,28 @@ struct BackupListView: View {
         if vm.files.isEmpty {
             EmptyStateView(message: "保存ファイルがありません", systemImage: "externaldrive")
         } else {
-            List {
-                ForEach(vm.files) { file in
-                    NavigationLink {
-                        BackupDetailEditorView(vm: vm, file: file)
-                    } label: {
-                        row(file)
-                    }
-                    .swipeActions(edge: .leading) {
-                        Button("反映") { vm.setActive(file) }
-                            .tint(.accentColor)
+            List(selection: $selection) {
+                Section(footer: Text("タップで反映先を切り替え。左スワイプで編集・書き出し。「選択」で削除。")) {
+                    ForEach(vm.files) { file in
+                        Button { if !editMode.isEditing { vm.setActive(file) } } label: {
+                            row(file)
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing) {
+                            Button("編集") { editingFile = file }
+                                .tint(.gray)
+                            if let url = vm.fileURL(of: file) {
+                                ShareLink(item: url) {
+                                    Label("書き出し", systemImage: "square.and.arrow.up")
+                                }
+                                .tint(.blue)
+                            }
+                        }
                     }
                 }
+            }
+            .navigationDestination(item: $editingFile) { file in
+                BackupDetailEditorView(vm: vm, file: file)
             }
             .alert("保存できません",
                    isPresented: Binding(get: { vm.hasValidationError },
@@ -79,11 +143,44 @@ struct BackupListView: View {
                 .foregroundStyle(file.isActive ? Color.accentColor : .secondary)
             VStack(alignment: .leading) {
                 Text(file.fileName)
+                    .foregroundStyle(.primary)
                 Text(file.lastModified.formatted(date: .abbreviated, time: .shortened))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            Spacer()
         }
+        .contentShape(Rectangle())
+    }
+
+    // MARK: - 選択・削除
+
+    private func toggleEditing() {
+        withAnimation {
+            editMode = editMode.isEditing ? .inactive : .active
+        }
+        if !editMode.isEditing { selection.removeAll() }
+    }
+
+    private func editSelected() {
+        guard let vm, let file = vm.files.first(where: { selection.contains($0.id) }) else { return }
+        withAnimation { editMode = .inactive }
+        selection.removeAll()
+        editingFile = file
+    }
+
+    private func deleteSelected(_ vm: BackupViewModel) {
+        let targets = vm.files.filter { selection.contains($0.id) }
+        vm.delete(targets)
+        selection.removeAll()
+        if vm.files.isEmpty { withAnimation { editMode = .inactive } }
+    }
+
+    // MARK: - 新規作成
+
+    private func startNewFile() {
+        newFileName = vm?.suggestedNewFileName() ?? "DailyTask"
+        creatingNew = true
     }
 
     // MARK: - インポート

@@ -58,7 +58,9 @@ final class BackupViewModel {
 
     /// 編集テキストを保存する。検証 → 拒否（汎用エラー）or 反映。
     /// 反映成功時は内部DB（正本）から active ファイルへ書き戻して同期する。
-    func save(_ editedText: String) {
+    /// 戻り値は保存成否（成功 true / 検証 NG・反映失敗 false）。
+    @discardableResult
+    func save(_ editedText: String) -> Bool {
         let data = Data(editedText.utf8)
         do {
             try sync.importFromFile(data)       // パース→検証→反映（失敗時はここで throw）
@@ -66,9 +68,50 @@ final class BackupViewModel {
             try sync.exportToActiveFile()       // 正本から active ファイルへ正規化して書き戻し
             hasValidationError = false
             reloadFiles()
+            return true
         } catch {
             hasValidationError = true
+            return false
         }
+    }
+
+    /// 指定したファイルを削除する（Documents 上の実体 + BackupFile レコード）。
+    /// 正本は SwiftData 側にあるため、active ファイルを削除してもアプリ表示データは失われない。
+    func delete(_ filesToDelete: [BackupFile]) {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        for file in filesToDelete {
+            try? FileManager.default.removeItem(at: docs.appendingPathComponent(file.fileName))
+            context.delete(file)
+        }
+        try? context.save()
+        reloadFiles()
+    }
+
+    /// 空データ（タスク・タグ0件）の新規ファイルを作成する。active 化はしない。
+    /// 検証を通る正規 JSON（`{"version":n,"tags":[],"tasks":[]}`）を生成して追加する。
+    func createNewFile(named rawName: String) {
+        guard let data = try? BackupCodec().encode(tasks: [], tags: []) else {
+            hasValidationError = true
+            return
+        }
+        addFile(name: uniqueName(from: rawName), data: data)
+    }
+
+    /// 新規作成時のデフォルト候補名（既存と重複しないもの）。
+    func suggestedNewFileName() -> String {
+        uniqueName(from: "DailyTask")
+    }
+
+    /// 既存ファイル名と衝突しない名前（拡張子なし）を返す。
+    private func uniqueName(from raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = (trimmed.isEmpty ? "DailyTask" : trimmed)
+            .replacingOccurrences(of: ".json", with: "")
+        let existing = Set(files.map { $0.fileName })
+        if !existing.contains(base + ".json") { return base }
+        var i = 2
+        while existing.contains("\(base)-\(i).json") { i += 1 }
+        return "\(base)-\(i)"
     }
 
     /// 検証付きでファイルを追加（Documents へコピー・active 化はしない）。
@@ -86,6 +129,15 @@ final class BackupViewModel {
     func text(of file: BackupFile) -> String {
         guard let data = readData(of: file) else { return "" }
         return String(decoding: data, as: UTF8.self)
+    }
+
+    /// 指定ファイルの実体 URL（Documents 配下）。共有／書き出し用。
+    /// 実ファイルが存在しない場合は nil。
+    func fileURL(of file: BackupFile) -> URL? {
+        let url = FileManager.default
+            .urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(file.fileName)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     // MARK: - 内部

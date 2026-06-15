@@ -13,6 +13,7 @@ struct BackupDetailEditorView: View {
     let file: BackupFile
 
     @State private var text: String = ""
+    @State private var showSaved = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,9 +29,19 @@ struct BackupDetailEditorView: View {
         .navigationTitle(file.fileName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button("保存") { vm.save(text) }
+            if let url = vm.fileURL(of: file) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ShareLink(item: url) {
+                        Label("書き出し", systemImage: "square.and.arrow.up")
+                    }
+                }
             }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("保存") { if vm.save(text) { showSaved = true } }
+            }
+        }
+        .alert("保存しました", isPresented: $showSaved) {
+            Button("OK", role: .cancel) {}
         }
         .onAppear { text = vm.text(of: file) }
     }

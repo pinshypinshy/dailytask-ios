@@ -7,8 +7,11 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct RootTabView: View {
+    @Environment(\.modelContext) private var context
+
     var body: some View {
         TabView {
             TodayTasksView()
@@ -19,6 +22,11 @@ struct RootTabView: View {
 
             BackupListView()
                 .tabItem { Label("保存データ", systemImage: "externaldrive") }
+        }
+        .task {
+            // 初回起動時にデフォルトの保存ファイル（空データ）を1件用意する。
+            let sync = FileSyncService(context: context, codec: BackupCodec(), validator: BackupValidator())
+            try? sync.seedDefaultFileIfNeeded()
         }
     }
 }
