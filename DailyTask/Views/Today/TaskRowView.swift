@@ -25,6 +25,13 @@ struct TaskRowView: View {
                 .strikethrough(task.isCompleted, color: .secondary)
                 .foregroundStyle(task.isCompleted ? .secondary : .primary)
 
+            if task.isRecurring {
+                Image(systemName: "repeat")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("毎日繰り返す")
+            }
+
             Spacer()
 
             Button(action: onToggleFavorite) {

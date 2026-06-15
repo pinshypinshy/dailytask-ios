@@ -105,6 +105,7 @@ final class FileSyncService {
                                     name: dtoTask.name,
                                     isFavorite: dtoTask.isFavorite,
                                     isCompleted: dtoTask.isCompleted,
+                                    isRecurring: dtoTask.isRecurring ?? false,
                                     date: parsedDate.dayKey,
                                     tagIDs: tagIDs))
         }

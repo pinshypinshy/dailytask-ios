@@ -63,17 +63,29 @@ final class SnapshotManager {
         try context.save()
     }
 
-    /// 日付が変わった際の確定処理。当日より前でスナップショット未確定の日を確定する。
-    /// 単発型のためタスクの繰り越しは行わない（新しい日は空から始まる）。
+    /// 日付が変わった際の確定処理。
+    /// 1) 当日より前でスナップショット未確定の日を確定する（繰り越し前の完了状態を記録）。
+    /// 2) 習慣型タスク（isRecurring）は当日へ繰り越し、完了状態をリセットする。
+    ///    単発型はその日のまま残し、Today からは見えなくなる（新しい日は空から始まる）。
+    /// 確定を先に行うことで、前日分の達成率は繰り越し前の値で正しく保存される。
     func rolloverIfNeeded(now: Date) throws {
         let today = now.dayKey
         let pastTasks = try context.fetch(
             FetchDescriptor<TaskItem>(predicate: #Predicate { $0.date < today })
         )
+
+        // 1) 未確定 Snapshot を確定（繰り越しでタスクが移動する前に集計する）。
         let days = Set(pastTasks.map { $0.date })
         for day in days where snapshot(for: day) == nil {
             try updateSnapshot(for: day)
         }
+
+        // 2) 習慣型タスクを当日へ移し、完了状態をリセット。
+        for task in pastTasks where task.isRecurring {
+            task.date = today
+            task.isCompleted = false
+        }
+        try context.save()
     }
 
     /// 指定日の Snapshot を取得（過去グラフ参照用）。

@@ -14,6 +14,7 @@ struct TaskDTO: Codable {
     let name: String
     let isFavorite: Bool
     let isCompleted: Bool
+    let isRecurring: Bool?  // 任意。version 1 の旧ファイルには存在しないため optional（欠落時は false 扱い）
     let date: String        // ISO 8601（日付）
     let tagIDs: [String]
 }

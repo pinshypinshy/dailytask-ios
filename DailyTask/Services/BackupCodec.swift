@@ -12,8 +12,12 @@
 import Foundation
 
 struct BackupCodec {
-    /// 書き出すスキーマの既知バージョン（検証ルール2の判定基準でもある）。
-    static let currentVersion = 1
+    /// 書き出すスキーマの最新バージョン（書き出しはこの値を用いる）。
+    /// v2 で TaskDTO.isRecurring（習慣型フラグ）を追加。v1 は当該フィールド欠落として後方互換で読める。
+    static let currentVersion = 2
+
+    /// インポートで受理する既知バージョン（検証ルール2の判定基準）。
+    static let knownVersions: Set<Int> = [1, 2]
 
     /// JSON 上の date 表現（ISO 8601 の日付のみ）。round-trip の単一情報源。
     /// 日キー（端末ローカル）との整合のため TimeZone.current を用いる。
@@ -36,6 +40,7 @@ struct BackupCodec {
                     name: task.name,
                     isFavorite: task.isFavorite,
                     isCompleted: task.isCompleted,
+                    isRecurring: task.isRecurring,
                     date: Self.isoDateFormatter.string(from: task.date),
                     tagIDs: task.tagIDs.map { $0.uuidString })
         }

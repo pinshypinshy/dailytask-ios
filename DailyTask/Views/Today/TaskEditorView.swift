@@ -10,21 +10,23 @@ import SwiftUI
 
 struct TaskEditorView: View {
     let tags: [Tag]
-    let onCommit: (_ name: String, _ isFavorite: Bool, _ tagIDs: [UUID]) -> Void
+    let onCommit: (_ name: String, _ isFavorite: Bool, _ isRecurring: Bool, _ tagIDs: [UUID]) -> Void
 
     @State private var name: String
     @State private var isFavorite: Bool
+    @State private var isRecurring: Bool
     @State private var selectedTagIDs: Set<UUID>
     private let title: String
     @Environment(\.dismiss) private var dismiss
 
     init(task: TaskItem? = nil,
          tags: [Tag],
-         onCommit: @escaping (String, Bool, [UUID]) -> Void) {
+         onCommit: @escaping (String, Bool, Bool, [UUID]) -> Void) {
         self.tags = tags
         self.onCommit = onCommit
         _name = State(initialValue: task?.name ?? "")
         _isFavorite = State(initialValue: task?.isFavorite ?? false)
+        _isRecurring = State(initialValue: task?.isRecurring ?? false)
         _selectedTagIDs = State(initialValue: Set(task?.tagIDs ?? []))
         self.title = task == nil ? "タスクを追加" : "タスクを編集"
     }
@@ -35,6 +37,11 @@ struct TaskEditorView: View {
                 Section {
                     TextField("タスク名", text: $name)
                     Toggle("お気に入り", isOn: $isFavorite)
+                    Toggle("毎日繰り返す", isOn: $isRecurring)
+                } footer: {
+                    Text(isRecurring
+                         ? "翌日もリストに残り、実行済みは毎日リセットされます。"
+                         : "その日限りのタスクです。翌日には一覧から外れます。")
                 }
                 Section("タグ") {
                     if tags.isEmpty {
@@ -65,6 +72,7 @@ struct TaskEditorView: View {
                     Button("保存") {
                         onCommit(name.trimmingCharacters(in: .whitespacesAndNewlines),
                                  isFavorite,
+                                 isRecurring,
                                  Array(selectedTagIDs))
                         dismiss()
                     }

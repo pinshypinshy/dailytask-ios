@@ -64,13 +64,13 @@ struct TodayTasksView: View {
                 }
             }
             .sheet(isPresented: $showingAdd) {
-                TaskEditorView(tags: tags) { name, isFavorite, tagIDs in
-                    addTask(name: name, isFavorite: isFavorite, tagIDs: tagIDs)
+                TaskEditorView(tags: tags) { name, isFavorite, isRecurring, tagIDs in
+                    addTask(name: name, isFavorite: isFavorite, isRecurring: isRecurring, tagIDs: tagIDs)
                 }
             }
             .sheet(item: $editingTask) { task in
-                TaskEditorView(task: task, tags: tags) { name, isFavorite, tagIDs in
-                    applyEdit(task, name: name, isFavorite: isFavorite, tagIDs: tagIDs)
+                TaskEditorView(task: task, tags: tags) { name, isFavorite, isRecurring, tagIDs in
+                    applyEdit(task, name: name, isFavorite: isFavorite, isRecurring: isRecurring, tagIDs: tagIDs)
                 }
             }
             .sheet(isPresented: $showingTags) {
@@ -105,20 +105,22 @@ struct TodayTasksView: View {
 
     // MARK: - タスク操作（薄い補助関数）
 
-    private func addTask(name: String, isFavorite: Bool, tagIDs: [UUID]) {
+    private func addTask(name: String, isFavorite: Bool, isRecurring: Bool, tagIDs: [UUID]) {
         guard !name.isEmpty else { return }
         let task = TaskItem(name: name,
                             isFavorite: isFavorite,
+                            isRecurring: isRecurring,
                             date: Date.now.dayKey,
                             tagIDs: tagIDs)
         context.insert(task)
         persistAndSync()
     }
 
-    private func applyEdit(_ task: TaskItem, name: String, isFavorite: Bool, tagIDs: [UUID]) {
+    private func applyEdit(_ task: TaskItem, name: String, isFavorite: Bool, isRecurring: Bool, tagIDs: [UUID]) {
         guard !name.isEmpty else { return }
         task.name = name
         task.isFavorite = isFavorite
+        task.isRecurring = isRecurring
         task.tagIDs = tagIDs
         persistAndSync()
     }

@@ -23,9 +23,9 @@ struct BackupValidator {
         try validateUniqueIDs(dto)
     }
 
-    /// ルール2: version が既知か。
+    /// ルール2: version が既知か（v1 / v2 を受理。v2 で isRecurring を追加）。
     func validateVersion(_ dto: BackupFileDTO) throws {
-        guard dto.version == BackupCodec.currentVersion else {
+        guard BackupCodec.knownVersions.contains(dto.version) else {
             throw ValidationError(rule: .unknownVersion)
         }
     }
