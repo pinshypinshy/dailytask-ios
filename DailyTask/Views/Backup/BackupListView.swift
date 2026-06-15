@@ -123,6 +123,9 @@ struct BackupListView: View {
                         }
                     }
                 }
+                Section {
+                    helpLinkRow
+                }
             }
             .navigationDestination(item: $editingFile) { file in
                 BackupDetailEditorView(vm: vm, file: file)
@@ -151,6 +154,23 @@ struct BackupListView: View {
             Spacer()
         }
         .contentShape(Rectangle())
+    }
+
+    // MARK: - ヘルプ
+
+    private var helpLinkRow: some View {
+        Link(destination: URL(string: "https://dailytask.yuki-hiraishi.com")!) {
+            HStack {
+                Image(systemName: "questionmark.circle")
+                    .foregroundStyle(Color.accentColor)
+                Text("JSONファイルの指定の文法を公式サイトで確認する")
+                    .foregroundStyle(.primary)
+                Spacer()
+                Image(systemName: "arrow.up.right.square")
+                    .foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
     }
 
     // MARK: - 選択・削除
