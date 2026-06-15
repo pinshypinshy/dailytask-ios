@@ -26,7 +26,7 @@ struct TaskEditorView: View {
         self.onCommit = onCommit
         _name = State(initialValue: task?.name ?? "")
         _isFavorite = State(initialValue: task?.isFavorite ?? false)
-        _isRecurring = State(initialValue: task?.isRecurring ?? false)
+        _isRecurring = State(initialValue: task?.isRecurring ?? true)
         _selectedTagIDs = State(initialValue: Set(task?.tagIDs ?? []))
         self.title = task == nil ? "タスクを追加" : "タスクを編集"
     }

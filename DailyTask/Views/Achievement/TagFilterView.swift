@@ -27,6 +27,7 @@ struct TagFilterView: View {
                         }
                     }
                     .padding(.horizontal)
+                    .padding(.vertical, 4)
                 }
             }
         }

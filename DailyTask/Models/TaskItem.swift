@@ -18,7 +18,7 @@ final class TaskItem {
     var name: String
     var isFavorite: Bool
     var isCompleted: Bool
-    var isRecurring: Bool = false   // true: 習慣型（翌日へ繰り越し・完了状態リセット）/ false: 単発型
+    var isRecurring: Bool = true   // true: 習慣型（翌日へ繰り越し・完了状態リセット）/ false: 単発型
     var date: Date          // 時刻正規化済みの「属する日」
     var tagIDs: [UUID]      // 多対多をタスク側で保持
     var createdAt: Date
@@ -27,7 +27,7 @@ final class TaskItem {
          name: String,
          isFavorite: Bool = false,
          isCompleted: Bool = false,
-         isRecurring: Bool = false,
+         isRecurring: Bool = true,
          date: Date,
          tagIDs: [UUID] = [],
          createdAt: Date = .now) {
